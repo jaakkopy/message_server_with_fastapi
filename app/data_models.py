@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from sqlalchemy import Column, String, Integer, BLOB, ForeignKey, create_engine
+from sqlalchemy import Column, String, Integer, BLOB, ForeignKey, Boolean, create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 from dotenv import load_dotenv
@@ -15,7 +15,6 @@ class User(Base):
     email = Column(String, unique=True, index=True)
     password_hash = Column(BLOB)
     salt = Column(BLOB)
-    messages = relationship("Message", backref="message")
 
 
 @dataclass
@@ -23,6 +22,7 @@ class Message(Base):
     __tablename__ = "message"
     id = Column(Integer, primary_key=True, autoincrement=True)
     content = Column(String)
+    seen = Column(Boolean, default=False)
     sender_id = Column(Integer, ForeignKey("user.id"))
     receiver_id = Column(Integer, ForeignKey("user.id"))
 

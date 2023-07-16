@@ -1,14 +1,15 @@
 from pydantic import BaseModel, EmailStr
 from fastapi import APIRouter, HTTPException, Depends, status
-from ..data_models import User, SessionLocal
+from ..data_models import User
 import bcrypt
 from sqlalchemy.orm import Session
 from jose import jwt, JWTError
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from typing import Annotated
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from os import getenv
+from ..db import get_db
 
 
 '''
@@ -17,7 +18,8 @@ NOTE: about 50% of the code here is copied from the documentation: https://fasta
 
 load_dotenv()
 router = APIRouter()
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+# Define the token redirect url
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/users/login")
 
 
 class UserData(BaseModel):
@@ -54,16 +56,16 @@ def verify_password(given: str, stored_salt: bytes) -> bool:
 def authenticate_user(db: Session, email: EmailStr, password: str) -> bool:
     user_with_email: list[User] = db.query(
         User).filter(User.email == email).first()
-    if not user_with_email:
+    if user_with_email is None:
         return False
     if not verify_password(password, user_with_email.salt):
         return False
     return True
 
 
-def get_user_by_email(db: Session, email: EmailStr) -> User:
+def get_user_by_email(db: Session, username: EmailStr) -> User:
     user_with_email: list[User] = db.query(
-        User).filter(User.email == email).first()
+        User).filter(User.email == username).first()
     return user_with_email
 
 
@@ -79,7 +81,7 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
     return encoded_jwt
 
 
-def verify_jwt(token: Annotated[str, Depends(oauth2_scheme)]):
+def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]) -> User:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -94,9 +96,8 @@ def verify_jwt(token: Annotated[str, Depends(oauth2_scheme)]):
         token_data = TokenData(username=username)
     except JWTError:
         raise credentials_exception
-    db = SessionLocal()
+    db = next(get_db())
     user = get_user_by_email(db, username=token_data.username)
-    db.close()
     if user is None:
         raise credentials_exception
     return user
@@ -104,7 +105,7 @@ def verify_jwt(token: Annotated[str, Depends(oauth2_scheme)]):
 
 @router.post("/users/register", response_model=SuccessfulRegister)
 def register_user(signup_data: UserData):
-    db: Session = SessionLocal()
+    db: Session = next(get_db()) 
     existing_users_with_email = db.query(User).filter(
         User.email == signup_data.email).all()
     if existing_users_with_email:
@@ -119,9 +120,9 @@ def register_user(signup_data: UserData):
 
 
 @router.post("/users/login", response_model=Token)
-def login_user(user_data: UserData):
-    db = SessionLocal()
-    auth_result = authenticate_user(db, user_data.email, user_data.password)
+def login_user(form_data: Annotated[OAuth2PasswordRequestForm, Depends()]):
+    db: Session = next(get_db()) 
+    auth_result = authenticate_user(db, form_data.username, form_data.password)
     db.close()
     if not auth_result:
         raise HTTPException(
@@ -132,6 +133,6 @@ def login_user(user_data: UserData):
     access_token_expires = timedelta(
         minutes=int(getenv("ACCESS_TOKEN_EXPIRE_MINUTES")))
     access_token = create_access_token(
-        data={"sub": user_data.email}, expires_delta=access_token_expires
+        data={"sub": form_data.username}, expires_delta=access_token_expires
     )
     return {"access_token": access_token, "token_type": "bearer"}
