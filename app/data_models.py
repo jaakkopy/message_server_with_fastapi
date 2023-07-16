@@ -3,9 +3,10 @@ from sqlalchemy import Column, String, Integer, BLOB, ForeignKey, create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
 from dotenv import load_dotenv
-from os import getenv 
+from os import getenv
 
 Base = declarative_base()
+
 
 @dataclass
 class User(Base):
@@ -15,13 +16,15 @@ class User(Base):
     password_hash = Column(BLOB)
     salt = Column(BLOB)
 
+
 @dataclass
 class Post(Base):
     __tablename__ = "posts"
     id = Column(Integer, primary_key=True, autoincrement=True)
     content = Column(String)
     sender_id = Column(Integer, ForeignKey("users.id"))
-    receiver_id =  Column(Integer, ForeignKey("users.id"))
+    receiver_id = Column(Integer, ForeignKey("users.id"))
+
 
 load_dotenv()
 engine = create_engine(getenv('CONNECTION_STR'), echo=True)
