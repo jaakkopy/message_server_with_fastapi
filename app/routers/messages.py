@@ -23,6 +23,9 @@ def format_messages(db: Session, all_messages: list[Message]) -> list[MessageInD
         formatted_messages.append(MessageInDB(sender=sender_email, content=m.content))
     return formatted_messages
 
+'''
+Get all messages, which are marked as seen==False. Set seen==True for each of these and return the messages.
+'''
 @router.get("/messages/unseen", response_model=list[MessageInDB])
 def get_all_unseen(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     all_unseen = db.query(Message).filter(Message.receiver_id == current_user.id).filter(Message.seen == False).all()
@@ -31,12 +34,18 @@ def get_all_unseen(current_user: User = Depends(get_current_user), db: Session =
     db.commit()
     return format_messages(db, all_unseen)
 
+'''
+Get all messages for the current user.
+'''
 @router.get("/messages/all", response_model=list[MessageInDB])
 def get_all_unseen(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     all_messages = db.query(Message).filter(Message.receiver_id == current_user.id).all()
     return format_messages(db, all_messages) 
 
 
+'''
+Send a new message to another user.
+'''
 @router.post("/messages/send", status_code=status.HTTP_201_CREATED, response_model=NewMessage)
 def get_all_unseen(new_message: NewMessage, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     receiver: User | None = db.query(User).filter(User.email == new_message.receiver).first()
