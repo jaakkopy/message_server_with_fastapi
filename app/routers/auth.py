@@ -12,10 +12,6 @@ from os import getenv
 from ..db import get_db
 
 
-'''
-NOTE: about 50% of the code here is copied from the documentation: https://fastapi.tiangolo.com/tutorial/security/oauth2-jwt/
-'''
-
 load_dotenv()
 router = APIRouter()
 # Define the token redirect url
@@ -105,7 +101,7 @@ def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]) -> User:
 
 @router.post("/users/register", response_model=SuccessfulRegister)
 def register_user(signup_data: UserData):
-    db: Session = next(get_db()) 
+    db: Session = next(get_db())
     existing_users_with_email = db.query(User).filter(
         User.email == signup_data.email).all()
     if existing_users_with_email:
@@ -121,7 +117,7 @@ def register_user(signup_data: UserData):
 
 @router.post("/users/login", response_model=Token)
 def login_user(form_data: Annotated[OAuth2PasswordRequestForm, Depends()]):
-    db: Session = next(get_db()) 
+    db: Session = next(get_db())
     auth_result = authenticate_user(db, form_data.username, form_data.password)
     db.close()
     if not auth_result:
