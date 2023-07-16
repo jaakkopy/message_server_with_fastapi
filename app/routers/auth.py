@@ -75,7 +75,7 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
         expire = datetime.utcnow() + timedelta(minutes=15)
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, getenv(
-        'SECRET_KEY'), algorithm=getenv('ALGORITHM'))
+        "SECRET_KEY"), algorithm=getenv("ALGORITHM"))
     return encoded_jwt
 
 
@@ -86,8 +86,8 @@ def verify_jwt(token: Annotated[str, Depends(oauth2_scheme)]):
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
-        payload = jwt.decode(token, getenv('SECRET_KEY'),
-                             algorithms=[getenv('ALGORITHM')])
+        payload = jwt.decode(token, getenv("SECRET_KEY"),
+                             algorithms=[getenv("ALGORITHM")])
         username: str = payload.get("sub")
         if username is None:
             raise credentials_exception
@@ -130,7 +130,7 @@ def login_user(user_data: UserData):
             headers={"WWW-Authenticate": "Bearer"},
         )
     access_token_expires = timedelta(
-        minutes=int(getenv('ACCESS_TOKEN_EXPIRE_MINUTES')))
+        minutes=int(getenv("ACCESS_TOKEN_EXPIRE_MINUTES")))
     access_token = create_access_token(
         data={"sub": user_data.email}, expires_delta=access_token_expires
     )
